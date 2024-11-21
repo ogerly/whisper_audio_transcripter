@@ -1,2 +1,4 @@
 privat/*
 text-transscript-meeting
+.env
+__pycache__/*

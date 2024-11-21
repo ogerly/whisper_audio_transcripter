@@ -19,10 +19,61 @@
     <div id="progress" class="progress mt-3" style="display: none;">
         <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
     </div>
-    <div id="result" class="mt-3"></div>
+    <div id="result" class="mt-3" style="min-height: 100px; border: 1px dashed #ccc; padding: 10px;">Warten auf Ergebnis...</div>
+
+    <h3 class="mt-5">Wähle ein Modell zur Meeting-Protokollerstellung</h3>
+    <div id="modelSelection" class="mt-3">
+        <!-- Die Modelle werden dynamisch aus dem Backend geladen -->
+    </div>
 </div>
 
 <script>
+    // Lade die verfügbaren Modelle und zeige sie als Buttons an
+    $(document).ready(function() {
+        $.ajax({
+            url: "/get_models",
+            type: "GET",
+            success: function(response) {
+                let modelSelectionDiv = $("#modelSelection");
+                modelSelectionDiv.empty();
+                $.each(response.models, function(key, modelName) {
+                    modelSelectionDiv.append(
+                        `<button class="btn btn-secondary mt-2 generate-summary" data-model="${key}">${modelName}</button>`
+                    );
+                });
+
+                // Füge Click-Handler für die Generierung des Meeting-Protokolls hinzu
+                $(".generate-summary").on("click", function() {
+                    const model = $(this).data("model");
+                    if (!window.transcript) {
+                        alert("Bitte zuerst eine Audiodatei hochladen und transkribieren.");
+                        return;
+                    }
+
+                    $.ajax({
+                        url: "/generate_summary",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            model: model,
+                            transcript: window.transcript
+                        }),
+                        success: function(response) {
+                            $("#result").append(`<p>Meeting Protokoll (${model}): ${response.meeting_summary}</p>`);
+                        },
+                        error: function() {
+                            alert("Fehler bei der Protokollerstellung mit Modell " + model);
+                        }
+                    });
+                });
+            },
+            error: function() {
+                $("#modelSelection").html(`<p class="text-danger">Fehler beim Laden der Modelle</p>`);
+            }
+        });
+    });
+
+    // Upload und Transkription
     $("#uploadForm").on("submit", function(event) {
         event.preventDefault();
         let formData = new FormData();
@@ -53,6 +104,7 @@
             success: function(response) {
                 $("#progress").hide();
                 $("#result").html(`<p>Transkript: ${response.transcript}</p><p>Bearbeitungszeit: ${response.processing_time} Sekunden</p>`);
+                window.transcript = response.transcript; // Speichere das Transkript global für die weitere Verarbeitung
             },
             error: function() {
                 $("#progress").hide();
@@ -61,5 +113,6 @@
         });
     });
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

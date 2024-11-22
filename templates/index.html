@@ -5,110 +5,308 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meeting Transkription</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <!-- Moved scripts to the end of the body for better loading -->
 </head>
 <body>
 <div class="container mt-5">
-    <h2>Meeting-Transkription hochladen</h2>
-    <form id="uploadForm">
-        <div class="mb-3">
-            <input type="file" name="audio" id="audio" class="form-control" accept="audio/mpeg">
-        </div>
-        <button type="submit" class="btn btn-primary">Hochladen und Transkribieren</button>
-    </form>
-    <div id="progress" class="progress mt-3" style="display: none;">
-        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-    </div>
-    <div id="result" class="mt-3" style="min-height: 100px; border: 1px dashed #ccc; padding: 10px;">Warten auf Ergebnis...</div>
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Meeting-Transkription hochladen</h2>
+            <form id="uploadForm">
+                <div class="mb-3">
+                    <input type="file" name="audio" id="audio" class="form-control" accept="audio/*">
+                </div>
+                <button type="submit" class="btn btn-primary">Hochladen und Transkribieren</button>
+            </form>
+            <div id="progress" class="progress mt-3" style="display: none;">
+                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
 
-    <h3 class="mt-5">Wähle ein Modell zur Meeting-Protokollerstellung</h3>
-    <div id="modelSelection" class="mt-3">
-        <!-- Die Modelle werden dynamisch aus dem Backend geladen -->
+            <h3 class="mt-5">Verfügbare Audiodateien im Upload-Ordner</h3>
+            <div id="fileList" class="mt-3">
+                <!-- Die Audiodateien werden dynamisch geladen -->
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <h3>Transkriptionsergebnis</h3>
+            <div id="result" class="mt-3" style="min-height: 150px; border: 1px dashed #ccc; padding: 10px;">Warten auf Ergebnis...</div>
+        </div>
     </div>
+
+    <h3 class="mt-5">Erstelle ein Meeting-Protokoll Prompt</h3>
+    <div id="promptArea" class="mt-3">
+        <textarea id="promptText" class="form-control" rows="6"></textarea>
+       
+        <h3 class="mt-5">Wählen Sie ein Modell aus</h3>
+        <div id="modelButtons" class="mt-3">
+            <!-- Die Modell-Buttons werden hier dynamisch geladen -->
+        </div>
+        <div>
+            <button id="sendToHuggingFace" class="btn btn-secondary mt-3">An HuggingFace senden</button>
+        </div>
+    </div>
+
+    <h3 class="mt-5">Meeting-Protokoll Antwort von HuggingFace</h3>
+    <div id="huggingFaceResult" class="mt-3" style="min-height: 150px; border: 1px dashed #ccc; padding: 10px;">Warten auf Antwort...</div>
 </div>
 
+<!-- Scripts should be placed at the end of the body -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script>
-    // Lade die verfügbaren Modelle und zeige sie als Buttons an
+    // Globale Deklaration von promptTemplate
+    let promptTemplate = '';
+    let selectedModel = ''; // Standardmodell wird dynamisch gesetzt
+
     $(document).ready(function() {
+        console.log("Page loaded. Initializing...");
+
+        // Fetch the prompt template from the server
         $.ajax({
-            url: "/get_models",
-            type: "GET",
+            url: '/get_prompt_template',
+            type: 'GET',
             success: function(response) {
-                let modelSelectionDiv = $("#modelSelection");
-                modelSelectionDiv.empty();
-                $.each(response.models, function(key, modelName) {
-                    modelSelectionDiv.append(
-                        `<button class="btn btn-secondary mt-2 generate-summary" data-model="${key}">${modelName}</button>`
-                    );
-                });
-
-                // Füge Click-Handler für die Generierung des Meeting-Protokolls hinzu
-                $(".generate-summary").on("click", function() {
-                    const model = $(this).data("model");
-                    if (!window.transcript) {
-                        alert("Bitte zuerst eine Audiodatei hochladen und transkribieren.");
-                        return;
-                    }
-
-                    $.ajax({
-                        url: "/generate_summary",
-                        type: "POST",
-                        contentType: "application/json",
-                        data: JSON.stringify({
-                            model: model,
-                            transcript: window.transcript
-                        }),
-                        success: function(response) {
-                            $("#result").append(`<p>Meeting Protokoll (${model}): ${response.meeting_summary}</p>`);
-                        },
-                        error: function() {
-                            alert("Fehler bei der Protokollerstellung mit Modell " + model);
-                        }
-                    });
-                });
+                promptTemplate = response.prompt_template;
+                console.log("Prompt template fetched successfully.", promptTemplate);
             },
             error: function() {
-                $("#modelSelection").html(`<p class="text-danger">Fehler beim Laden der Modelle</p>`);
+                console.error("Error fetching prompt template.");
+            },
+            complete: function() {
+                // Initialize the page regardless of success or error
+                initializePage();
             }
         });
-    });
 
-    // Upload und Transkription
+        /**
+         * Initialize the page by fetching the list of uploaded audio files and creating a table with action buttons.
+         * Also fetches the list of available models and displays them as buttons.
+         */
+        function initializePage() {
+            // Load available audio files
+            $.ajax({
+                url: "/get_uploaded_files",
+                type: "GET",
+                success: function(response) {
+                    console.log("Successfully retrieved audio files.", response);
+                    let fileListDiv = $("#fileList");
+                    fileListDiv.empty();
+                    if (response.files.length > 0) {
+                        let table = `<table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Audio-Datei</th>
+                                                <th>Aktionen</th>
+                                                <th>Verwenden</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>`;
+                        response.files.forEach(function(file) {
+                            console.log("Processing file: ", file.audio);
+                            table += `<tr>
+                                        <td>${file.audio}</td>
+                                        <td>
+                                            <button class="btn btn-primary transcribe-audio" data-audio="${file.audio}">Transkribieren</button>
+                                            ${file.transcript ? `<a href="/get_text/${file.transcript}" class="btn btn-success ms-2">Transkript herunterladen</a>` : ''}
+                                        </td>
+                                        <td>
+                                            ${file.transcript ? `<button class="btn btn-warning use-transcript" data-transcript="${file.transcript}">Verwenden</button>` : ''}
+                                        </td>
+                                         <td>
+        ${file.summary ? `<a href="/get_text/${file.summary}" class="btn btn-info">Protokoll herunterladen</a>` : ''}
+    </td>
+                                      </tr>`;
+                        });
+                        table += `</tbody>
+                                  </table>`;
+                        fileListDiv.html(table);
+                    } else {
+                        fileListDiv.html(`<p>Keine Audiodateien vorhanden.</p>`);
+                    }
+
+                    // Add click handlers
+                    $(".transcribe-audio").on("click", function() {
+                        const audioFile = $(this).data("audio");
+                        console.log("Starting transcription for file: ", audioFile);
+                        $("#result").html("<p>Transkription wird durchgeführt, bitte warten...</p>");
+                        $("#progress").show();
+                        $.ajax({
+                            url: "/upload_existing",
+                            type: "POST",
+                            contentType: "application/json",
+                            data: JSON.stringify({ audio: audioFile }),
+                            success: function(response) {
+                                console.log("Transcription successful. Response: ", response);
+                                $("#progress").hide();
+                                $("#result").html(`<p>Transkript: ${response.transcript}</p><p>Bearbeitungszeit: ${response.processing_time} Sekunden</p>`);
+                                window.transcript = response.transcript;
+                                $("#promptText").val(response.transcript);
+                            },
+                            error: function() {
+                                console.error("Error transcribing file: ", audioFile);
+                                $("#progress").hide();
+                                $("#result").html(`<p class="text-danger">Fehler bei der Transkription der Datei ${audioFile}</p>`);
+                            }
+                        });
+                    });
+
+                    $(".use-transcript").on("click", function() {
+                        const transcriptFile = $(this).data("transcript");
+                        console.log("Using existing transcript: ", transcriptFile);
+                        $.ajax({
+                            url: `/get_text/${transcriptFile}`,
+                            type: "GET",
+                            success: function(response) {
+                                console.log("Transcript retrieved successfully.", response);
+                                $("#result").html(`<p>Verwendetes Transkript: ${response}</p>`);
+                                window.transcript = response;
+                                $("#promptText").val(response);
+                            },
+                            error: function() {
+                                console.error("Error retrieving transcript: ", transcriptFile);
+                                $("#result").html(`<p class="text-danger">Fehler beim Abrufen des Transkripts ${transcriptFile}</p>`);
+                            }
+                        });
+                    });
+                },
+                error: function() {
+                    console.error("Error fetching audio files.");
+                    $("#fileList").html(`<p class="text-danger">Fehler beim Laden der Audiodateien</p>`);
+                }
+            });
+        
+             // Modelle abrufen und Buttons anzeigen
+             $.ajax({
+                url: '/get_models',
+                type: 'GET',
+                success: function(response) {
+                    displayModelButtons(response.models);
+                },
+                error: function() {
+                    console.error("Fehler beim Abrufen der Modelle.");
+                }
+            });
+        
+            function displayModelButtons(models) {
+            let modelButtonsDiv = $('#modelButtons');
+            modelButtonsDiv.empty();
+
+            for (let modelKey in models) {
+                let modelInfo = models[modelKey];
+                let apiType = modelInfo.api;
+                let modelName = modelKey + ` (${apiType})`;
+                let button = $('<button>')
+                    .addClass('btn btn-outline-primary me-2 mb-2')
+                    .attr('data-model', modelKey)
+                    .text(modelName)
+                    .on('click', function() {
+                        selectedModel = $(this).attr('data-model');
+                        // Markieren des ausgewählten Buttons
+                        $('#modelButtons button').removeClass('active');
+                        $(this).addClass('active');
+                        console.log("Ausgewähltes Modell:", selectedModel);
+                    });
+
+                modelButtonsDiv.append(button);
+            }
+
+            // Standardmäßig das erste Modell auswählen
+            if (!selectedModel) {
+                selectedModel = Object.keys(models)[0];
+                $('#modelButtons button[data-model="' + selectedModel + '"]').addClass('active');
+            }
+        }
+    }
+});
+
+// Upload and Transcription
     $("#uploadForm").on("submit", function(event) {
-        event.preventDefault();
-        let formData = new FormData();
-        let fileInput = $('#audio')[0].files[0];
-        formData.append('audio', fileInput);
+    event.preventDefault();
+    let formData = new FormData();
+    let fileInput = $('#audio')[0].files[0];
+    if (!fileInput) {
+        alert("Bitte wählen Sie eine Datei aus.");
+        return;
+    }
+    console.log("Starting upload for file: ", fileInput.name);
+    formData.append('audio', fileInput);
 
-        $("#progress").show();
-        $(".progress-bar").css("width", "0%");
-        $(".progress-bar").attr("aria-valuenow", 0);
+    $("#progress").show();
+    $(".progress-bar").css("width", "0%");
+    $(".progress-bar").attr("aria-valuenow", 0);
+
+    $.ajax({
+        url: "/upload",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        xhr: function() {
+            var xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener("progress", function(evt) {
+                if (evt.lengthComputable) {
+                    var percentComplete = (evt.loaded / evt.total) * 100;
+                    console.log("Upload progress: ", percentComplete + "%");
+                    $(".progress-bar").css("width", percentComplete + "%");
+                    $(".progress-bar").attr("aria-valuenow", percentComplete);
+                }
+            }, false);
+            return xhr;
+        },
+        success: function(response) {
+            console.log("Upload and transcription successful. Response: ", response);
+            $("#progress").hide();
+            $("#result").html(`<p>Transkript: ${response.transcript}</p><p>Bearbeitungszeit: ${response.processing_time} Sekunden</p>`);
+            window.transcript = response.transcript;
+            $("#promptText").val(response.transcript);
+        },
+        error: function(xhr) {
+            console.error("Error uploading or transcribing the file", xhr.responseText);
+            $("#progress").hide();
+            $("#result").html(`<p class="text-danger">Fehler beim Hochladen oder Transkribieren der Datei</p>`);
+        }
+    });
+});
+
+// Senden an HuggingFace
+$("#sendToHuggingFace").on("click", function() {
+        let transcript = $("#promptText").val();
+        if (!transcript) {
+            alert("Bitte geben Sie ein Transkript ein.");
+            return;
+        }
+
+        if (!selectedModel) {
+            alert("Bitte wählen Sie ein Modell aus.");
+            return;
+        }
+
+        // Verwenden des Prompt-Templates
+        const prompt = promptTemplate.replace("{transcript}", transcript);
+        console.log("Sende Prompt an API: ", prompt);
 
         $.ajax({
-            url: "/upload",
+            url: "/generate_summary",
             type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            xhr: function() {
-                var xhr = new window.XMLHttpRequest();
-                xhr.upload.addEventListener("progress", function(evt) {
-                    if (evt.lengthComputable) {
-                        var percentComplete = (evt.loaded / evt.total) * 100;
-                        $(".progress-bar").css("width", percentComplete + "%");
-                        $(".progress-bar").attr("aria-valuenow", percentComplete);
-                    }
-                }, false);
-                return xhr;
-            },
+            contentType: "application/json",
+            data: JSON.stringify({
+                model: selectedModel,
+                transcript: transcript  // Senden Sie das Transkript; das Prompting erfolgt serverseitig
+            }),
             success: function(response) {
-                $("#progress").hide();
-                $("#result").html(`<p>Transkript: ${response.transcript}</p><p>Bearbeitungszeit: ${response.processing_time} Sekunden</p>`);
-                window.transcript = response.transcript; // Speichere das Transkript global für die weitere Verarbeitung
+                console.log("Meeting-Protokoll erfolgreich erstellt.", response);
+                $("#huggingFaceResult").html(`<p>Meeting Protokoll:</p><pre>${response.meeting_summary}</pre>`);
+
+                // Aktualisiere die Dateiliste, um das neue Protokoll anzuzeigen
+                initializePage();
             },
-            error: function() {
-                $("#progress").hide();
-                $("#result").html(`<p class="text-danger">Fehler beim Hochladen oder Transkribieren der Datei</p>`);
+            error: function(xhr) {
+                console.error("Fehler bei der Protokollerstellung.", xhr.responseText);
+                let errorMessage = "Fehler bei der Protokollerstellung";
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage += `: ${xhr.responseJSON.error}`;
+                }
+                $("#huggingFaceResult").html(`<p class="text-danger">${errorMessage}</p>`);
             }
         });
     });

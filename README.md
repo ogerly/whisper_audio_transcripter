@@ -1,141 +1,253 @@
+**Aktualisiertes README.md**
+
+---
+
 # Whisper Audio Transcripter
 
 ## Beschreibung
 
-Ein einfaches Python-Tool, das Audiodateien eines Meetings transkribiert und automatisch Meeting-Protokolle erstellt. Es verwendet das OpenAI Whisper-Modell zur Transkription und das Hugging Face API-Modell zur Erstellung von Zusammenfassungen. Das Projekt basiert auf Flask als Backend, bietet eine Upload-Möglichkeit für Audiodateien und gibt nach Verarbeitung das vollständige Transkript sowie eine Zusammenfassung aus.
+Ein Python-basiertes Tool zur Transkription von Audiodateien und automatischen Erstellung von Meetingprotokollen. Es verwendet das OpenAI Whisper-Modell zur Transkription und sowohl die OpenAI ChatGPT API als auch die Hugging Face Inference API zur Erstellung von Zusammenfassungen. Das Projekt basiert auf Flask als Backend und bietet eine Weboberfläche zum Hochladen von Audiodateien, Anzeigen der Transkripte und Generieren von Meetingprotokollen.
 
-
-![image](https://github.com/user-attachments/assets/d150f934-d04a-40b2-8098-2f47c30d367c)
+![Screenshot der Anwendung](path/to/screenshot.png)
 
 ## Features
-- Hochladen von MP3-Audiodateien zur Verarbeitung
-- Transkription von Meetings mit Whisper
-- Erstellung eines Meeting-Protokolls über die Hugging Face API
-- Fortschrittsanzeige für die Verarbeitung im Frontend
+
+- **Audiodateien hochladen**: Unterstützt MP3, WAV und M4A Formate.
+- **Transkription mit Whisper**: Nutzt das OpenAI Whisper-Modell zur präzisen Spracherkennung.
+- **Automatische Meetingprotokolle**: Generiert strukturierte Protokolle mit der OpenAI ChatGPT API oder der Hugging Face Inference API.
+- **Modellauswahl**: Wählen Sie zwischen verschiedenen Modellen für die Zusammenfassung.
+- **Unterstützung der deutschen Sprache**: Optimiert für die Verarbeitung deutscher Texte.
+- **Download-Funktion**: Laden Sie Transkripte und Protokolle als Markdown-Dateien herunter.
+- **Benutzerfreundliches Frontend**: Intuitive Weboberfläche mit Fortschrittsanzeigen.
 
 ## Technologie-Stack
+
 - **Backend**: Flask
 - **Spracherkennung**: OpenAI Whisper
-- **Zusammenfassung**: Hugging Face API
+- **Zusammenfassung**: OpenAI ChatGPT API & Hugging Face Inference API
 - **Frontend**: HTML, Bootstrap, jQuery
 
 ## Anforderungen
-- Python 3.7+
-- Flask
-- OpenAI Whisper
-- Requests Library
-- Werkzeug
-- FFmpeg (für Whisper erforderlich)
+
+- **Python**: Version 3.7 oder höher
+- **Abhängigkeiten**: Siehe `requirements.txt`
+- **FFmpeg**: Für die Audioverarbeitung mit Whisper erforderlich
+- **API-Schlüssel**:
+  - **OpenAI API-Schlüssel**: Für die Nutzung der OpenAI ChatGPT API
+  - **Hugging Face API-Schlüssel**: Für die Nutzung der Hugging Face Inference API
 
 ## Installation
-1. Klone das Repository:
-   ```bash
-   git clone https://github.com/YOUR_GITHUB_USERNAME/whisper-audio-transcripter.git
-   cd whisper-audio-transcripter
-   ```
 
-2. Installiere die benötigten Python-Pakete:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1. Repository klonen
 
-3. Installiere FFmpeg (Linux):
-   ```bash
-   sudo apt-get install ffmpeg
-   ```
-
-4. Erstelle einen Ordner `templates` und speichere darin die `index.html`-Datei.
-
-5. Setze deinen Hugging Face API Key ein:
-   - Öffne die Python-Datei `whisper-audio-transcripter.py`
-   - Ersetze `YOUR_HUGGINGFACE_API_KEY_HERE` durch deinen API-Schlüssel von Hugging Face
-
-6. Starte die Anwendung:
-   ```bash
-   python3 whisper-audio-transcripter.py
-   ```
-
-## index.html Beispiel
-Hier ist ein Beispiel für die `index.html`, die im `templates`-Ordner gespeichert werden sollte:
-
-```html
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meeting Transkription</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-</head>
-<body>
-<div class="container mt-5">
-    <h2>Meeting-Transkription hochladen</h2>
-    <form id="uploadForm">
-        <div class="mb-3">
-            <input type="file" name="audio" id="audio" class="form-control" accept="audio/mpeg">
-        </div>
-        <button type="submit" class="btn btn-primary">Hochladen und Transkribieren</button>
-    </form>
-    <div id="progress" class="progress mt-3" style="display: none;">
-        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-    </div>
-    <div id="result" class="mt-3"></div>
-</div>
-
-<script>
-    $("#uploadForm").on("submit", function(event) {
-        event.preventDefault();
-        let formData = new FormData();
-        let fileInput = $('#audio')[0].files[0];
-        formData.append('audio', fileInput);
-
-        $("#progress").show();
-        $(".progress-bar").css("width", "0%");
-        $(".progress-bar").attr("aria-valuenow", 0);
-
-        $.ajax({
-            url: "/upload",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            xhr: function() {
-                var xhr = new window.XMLHttpRequest();
-                xhr.upload.addEventListener("progress", function(evt) {
-                    if (evt.lengthComputable) {
-                        var percentComplete = (evt.loaded / evt.total) * 100;
-                        $(".progress-bar").css("width", percentComplete + "%");
-                        $(".progress-bar").attr("aria-valuenow", percentComplete);
-                    }
-                }, false);
-                return xhr;
-            },
-            success: function(response) {
-                $("#progress").hide();
-                $("#result").html(`<p>Transkript: ${response.transcript}</p><p>Meeting Protokoll: ${response.meeting_summary}</p><p>Bearbeitungszeit: ${response.processing_time} Sekunden</p>`);
-            },
-            error: function() {
-                $("#progress").hide();
-                $("#result").html(`<p class="text-danger">Fehler beim Hochladen oder Transkribieren der Datei</p>`);
-            }
-        });
-    });
-</script>
-</body>
-</html>
+```bash
+git clone https://github.com/YOUR_GITHUB_USERNAME/whisper-audio-transcripter.git
+cd whisper-audio-transcripter
 ```
 
-## Demo
-Sobald die Anwendung läuft, öffne einen Browser und navigiere zu `http://127.0.0.1:5000`. Du wirst ein einfaches Formular sehen, in das du eine MP3-Datei hochladen kannst. Nachdem die Datei verarbeitet wurde, wird dir sowohl das Transkript als auch das Meeting-Protokoll angezeigt.
+### 2. Virtuelle Umgebung erstellen (optional, aber empfohlen)
 
-## Verwendungshinweise
-- Diese Anwendung sollte nicht in einer Produktionsumgebung verwendet werden, da das Hugging Face Modell, das hier genutzt wird, keine hohen Sicherheitsstandards aufweist.
-- Verwende für Produktionszwecke eine geeignete WSGI-Lösung (z.B. gunicorn) und hoste die Anwendung auf einem geeigneten Server.
+```bash
+python3 -m venv venv
+source venv/bin/activate  # Für Windows: venv\Scripts\activate
+```
+
+### 3. Abhängigkeiten installieren
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. FFmpeg installieren
+
+- **Linux (Debian/Ubuntu)**:
+
+  ```bash
+  sudo apt-get install ffmpeg
+  ```
+
+- **macOS (mit Homebrew)**:
+
+  ```bash
+  brew install ffmpeg
+  ```
+
+- **Windows**:
+
+  - Laden Sie FFmpeg von der [offiziellen Website](https://ffmpeg.org/download.html) herunter.
+  - Folgen Sie einer Anleitung, um FFmpeg zu installieren und dem PATH hinzuzufügen.
+
+### 5. API-Schlüssel einrichten
+
+#### a. OpenAI API-Schlüssel
+
+- **Registrierung**: Erstellen Sie ein Konto bei [OpenAI](https://platform.openai.com/).
+- **API-Schlüssel erstellen**: Gehen Sie zu [API-Schlüssel](https://platform.openai.com/account/api-keys) und erstellen Sie einen neuen Schlüssel.
+- **Kostenhinweis**: Die Nutzung der OpenAI API kann kostenpflichtig sein. Überprüfen Sie Ihre [Abrechnungsinformationen](https://platform.openai.com/account/billing/overview) und stellen Sie sicher, dass Sie über ausreichendes Guthaben verfügen.
+
+#### b. Hugging Face API-Schlüssel
+
+- **Registrierung**: Erstellen Sie ein Konto bei [Hugging Face](https://huggingface.co/join).
+- **Access Token erstellen**: Gehen Sie zu [Einstellungen > Access Tokens](https://huggingface.co/settings/tokens) und erstellen Sie ein neues Token mit Lesezugriff.
+- **Kostenhinweis**: Einige Modelle oder Dienste auf Hugging Face können kostenpflichtig sein oder erfordern spezielle Berechtigungen.
+
+#### c. Umgebungsvariablen einrichten
+
+Erstellen Sie eine `.env`-Datei im Hauptverzeichnis und fügen Sie Ihre API-Schlüssel hinzu:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+HUGGINGFACE_API_KEY=your_huggingface_api_key_here
+```
+
+**Hinweis**: Stellen Sie sicher, dass die `.env`-Datei nicht in Ihr Versionskontrollsystem aufgenommen wird, um Ihre Schlüssel zu schützen.
+
+### 6. Anwendung starten
+
+```bash
+python3 whisper-audio-transcripter.py
+```
+
+Die Anwendung läuft nun auf `http://127.0.0.1:5000`.
+
+## Verwendung
+
+### 1. Weboberfläche öffnen
+
+- Öffnen Sie einen Webbrowser und navigieren Sie zu `http://127.0.0.1:5000`.
+
+### 2. Audiodatei hochladen
+
+- Klicken Sie auf "Datei auswählen" und wählen Sie eine Audiodatei (MP3, WAV, M4A) aus.
+- Klicken Sie auf "Datei hochladen", um die Audiodatei zum Server zu übertragen.
+
+### 3. Audiodatei transkribieren
+
+- In der Liste der hochgeladenen Dateien sehen Sie Ihre Audiodatei.
+- Klicken Sie auf "Transkribieren", um die Audiodatei in Text umzuwandeln.
+- Der Fortschritt wird im Frontend angezeigt.
+
+### 4. Transkript anzeigen oder herunterladen
+
+- Nach Abschluss der Transkription können Sie das Transkript anzeigen oder als Textdatei herunterladen.
+
+### 5. Modell für die Zusammenfassung auswählen
+
+- Wählen Sie ein Modell aus der Liste der verfügbaren Modelle. Diese sind nach API (OpenAI oder Hugging Face) gekennzeichnet.
+- Achten Sie darauf, ein Modell zu wählen, das die deutsche Sprache unterstützt.
+
+### 6. Meetingprotokoll erstellen
+
+- Klicken Sie auf "Protokoll erstellen", um basierend auf dem Transkript ein Meetingprotokoll zu generieren.
+- Das Meetingprotokoll wird im Frontend angezeigt und kann ebenfalls heruntergeladen werden.
+
+## Anpassung des Prompt-Templates
+
+Das Prompt-Template, das zur Generierung der Meetingprotokolle verwendet wird, befindet sich in der Datei `models.py` unter `PROMPT_TEMPLATE`. Sie können dieses Template nach Ihren Bedürfnissen anpassen, um die Ausgabe des Modells zu beeinflussen.
+
+**Beispiel:**
+
+```python
+PROMPT_TEMPLATE = """
+Generiere ein professionelles und strukturiertes Meetingprotokoll basierend auf dem folgenden Transkript:
+
+{transcript}
+
+Das Protokoll sollte folgende Abschnitte enthalten:
+- Datum
+- Teilnehmer
+- Zusammenfassung
+- Agenda-Punkte
+- Entscheidungen
+- Aktionspunkte
+- Nächste Schritte
+"""
+```
+
+## Hinweise zur Nutzung der APIs
+
+- **API-Schlüssel Sicherheit**
+
+  - Bewahren Sie Ihre API-Schlüssel sicher auf.
+  - Geben Sie Ihre Schlüssel nicht an Dritte weiter.
+  - Stellen Sie sicher, dass die `.env`-Datei nicht öffentlich zugänglich ist.
+
+- **Kosten und Abrechnung**
+
+  - Die Nutzung der OpenAI API und einiger Modelle der Hugging Face API kann kostenpflichtig sein.
+  - Überwachen Sie Ihre API-Nutzung, um ungewollte Kosten zu vermeiden.
+  - Überprüfen Sie regelmäßig Ihre Abrechnungsinformationen bei OpenAI und Hugging Face.
+
+- **Nutzungsbedingungen**
+
+  - Achten Sie darauf, die jeweiligen Nutzungsbedingungen von OpenAI und Hugging Face einzuhalten.
+  - Verarbeiten Sie keine vertraulichen oder urheberrechtlich geschützten Inhalte ohne entsprechende Berechtigung.
+
+## Anforderungen an die Modelle
+
+- **Unterstützung der deutschen Sprache**
+
+  - Da die Anwendung mit deutschen Texten arbeitet, sollten Sie Modelle wählen, die Deutsch unterstützen.
+  - **Empfohlene Modelle**:
+    - **OpenAI**: `gpt-3.5-turbo` (unterstützt mehrere Sprachen, einschließlich Deutsch)
+    - **Hugging Face**: `ml6team/mt5-small-german-finetune-mlsum` (speziell für deutsche Zusammenfassungen trainiert)
+
+## Beispielkonfiguration der Modelle (`models.py`)
+
+```python
+MODELS = {
+    "gpt-3.5-turbo": {
+        "api": "openai",
+        "model_id": "gpt-3.5-turbo"
+    },
+    "mt5-small-german": {
+        "api": "huggingface",
+        "model_id": "ml6team/mt5-small-german-finetune-mlsum"
+    },
+    # Weitere Modelle können hier hinzugefügt werden
+}
+```
+
+## Fehlerbehebung
+
+### 1. Fehler bei der Protokollerstellung
+
+- **Mögliche Ursachen**:
+  - API-Schlüssel sind nicht korrekt oder fehlen.
+  - API-Kontingent wurde überschritten.
+  - Netzwerkprobleme.
+
+- **Lösungen**:
+  - Überprüfen Sie Ihre `.env`-Datei und stellen Sie sicher, dass die API-Schlüssel korrekt sind.
+  - Loggen Sie sich bei OpenAI und Hugging Face ein, um Ihr Kontingent und Ihre Abrechnungsinformationen zu überprüfen.
+  - Prüfen Sie Ihre Internetverbindung.
+
+### 2. Unvollständige oder fehlerhafte Ausgaben
+
+- **Mögliche Ursachen**:
+  - Das gewählte Modell unterstützt die deutsche Sprache nicht ausreichend.
+  - Der Prompt ist zu komplex oder unklar.
+
+- **Lösungen**:
+  - Wählen Sie ein anderes Modell, das besser für die deutsche Sprache geeignet ist.
+  - Passen Sie das `PROMPT_TEMPLATE` an und vereinfachen Sie es gegebenenfalls.
+
+### 3. Allgemeine Tipps
+
+- **Konsolenausgaben überprüfen**: Sowohl im Backend (Terminal) als auch im Frontend (Browser-Konsole) können hilfreiche Fehlermeldungen erscheinen.
+- **Server neu starten**: Nach Änderungen am Code oder den Umgebungsvariablen den Server neu starten.
+- **Browser-Cache leeren**: Bei Änderungen im Frontend kann es hilfreich sein, den Cache zu leeren oder im Inkognito-Modus zu testen.
 
 ## Lizenz
-MIT License. Weitere Informationen findest du in der `LICENSE`-Datei.
+
+Dieses Projekt steht unter der [MIT Lizenz](LICENSE).
 
 ## Beitragende
-Pull-Requests und Issues sind willkommen! Fühle dich frei, zur Verbesserung dieses Tools beizutragen.
 
+Beiträge sind willkommen! Bitte öffnen Sie ein Issue oder einen Pull Request, um zur Verbesserung dieses Projekts beizutragen.
+
+---
+
+**Hinweis**: Stellen Sie sicher, dass Sie die aktuellsten Versionen der verwendeten Bibliotheken und Modelle verwenden. Lesen Sie die Dokumentation der APIs sorgfältig, um optimale Ergebnisse zu erzielen.
+
+**Wichtig**: Denken Sie daran, dass die Nutzung von KI-Modellen und APIs ethische Überlegungen mit sich bringt. Seien Sie verantwortlich bei der Verarbeitung von Daten und achten Sie auf Datenschutz und Urheberrechte.

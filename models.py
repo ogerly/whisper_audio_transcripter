@@ -23,6 +23,10 @@ MODELS = {
         "api": "huggingface",
         "model_id": "google/flan-t5-large"
     },
+    "bart-large-cnn": {
+        "api": "huggingface",
+        "model_id": "facebook/bart-large-cnn"
+    },
     "gpt-3.5-turbo": {
         "api": "openai",
         "model_id": "gpt-3.5-turbo"

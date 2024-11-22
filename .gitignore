@@ -1,4 +1,6 @@
 privat/*
-text-transscript-meeting
 .env
 __pycache__/*
+text.py
+texts/*
+uploads/*

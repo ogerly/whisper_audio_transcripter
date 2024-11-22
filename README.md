@@ -4,6 +4,10 @@
 
 # Whisper Audio Transcripter
 
+
+![image](https://github.com/user-attachments/assets/e8ed15c9-5e5f-452d-af59-361eefac631a)
+
+
 ## Beschreibung
 
 Ein Python-basiertes Tool zur Transkription von Audiodateien und automatischen Erstellung von Meetingprotokollen. Es verwendet das OpenAI Whisper-Modell zur Transkription und sowohl die OpenAI ChatGPT API als auch die Hugging Face Inference API zur Erstellung von Zusammenfassungen. Das Projekt basiert auf Flask als Backend und bietet eine Weboberfläche zum Hochladen von Audiodateien, Anzeigen der Transkripte und Generieren von Meetingprotokollen.

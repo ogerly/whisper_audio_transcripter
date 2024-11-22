@@ -8,7 +8,9 @@
 
 Ein Python-basiertes Tool zur Transkription von Audiodateien und automatischen Erstellung von Meetingprotokollen. Es verwendet das OpenAI Whisper-Modell zur Transkription und sowohl die OpenAI ChatGPT API als auch die Hugging Face Inference API zur Erstellung von Zusammenfassungen. Das Projekt basiert auf Flask als Backend und bietet eine Weboberfläche zum Hochladen von Audiodateien, Anzeigen der Transkripte und Generieren von Meetingprotokollen.
 
-![Screenshot der Anwendung](path/to/screenshot.png)
+
+![Bildschirmfoto vom 2024-11-22 18-48-17](https://github.com/user-attachments/assets/537657fc-91b7-4a3f-bb58-c5760b7bf88c)
+
 
 ## Features
 

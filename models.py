@@ -1,28 +1,4 @@
 MODELS = {
-    "Mistral-Nemo": {
-        "api": "huggingface",
-        "model_id": "mistralai/Mistral-Nemo-Instruct-2407"
-    },
-    "gemma-2-2b-it": {
-        "api": "huggingface",
-        "model_id": "google/gemma-2-2b-it"
-    },
-    "Phi-3-mini": {
-        "api": "huggingface",
-        "model_id": "microsoft/Phi-3-mini-4k-instruct"
-    },
-    "Qwen2.5-7B": {
-        "api": "huggingface",
-        "model_id": "Qwen/Qwen2.5-7B-Instruct"
-    },
-    "Llama-3.1-Nemotron": {
-        "api": "huggingface",
-        "model_id": "nvidia/Llama-3.1-Nemotron-70B-Instruct"
-    },
-    "flan-t5": {
-        "api": "huggingface",
-        "model_id": "google/flan-t5-large"
-    },
     "bart-large-cnn": {
         "api": "huggingface",
         "model_id": "facebook/bart-large-cnn"
